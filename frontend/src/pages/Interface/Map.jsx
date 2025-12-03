@@ -43,9 +43,9 @@ const Map = () => {
         id: "satellite",
         label: "Satellite",
         // Esri World Imagery tiles
-        // url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        // // attribution:
-        //   "Tiles &copy; Esri &mdash; Source: Esri, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community",
+        url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        attribution:
+          "Tiles © Esri — Source: Esri, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community",
       },
     }),
     []
@@ -63,11 +63,16 @@ const Map = () => {
             className="h-full w-full z-0"
             style={{ height: "100%", width: "100%" }}
           >
-            <TileLayer
-              key={activeLayer}
-              attribution={baseLayers[activeLayer].attribution}
-              url={baseLayers[activeLayer].url}
-            />
+            {(() => {
+              const layer = baseLayers[activeLayer] || baseLayers.standard;
+              return (
+                <TileLayer
+                  key={layer.id}
+                  attribution={layer.attribution}
+                  url={layer.url}
+                />
+              );
+            })()}
             <MapView center={marinduqueCenter} zoom={defaultZoom} />
 
             {/* Marker for Marinduque Center */}
