@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import Layout from "../../components/Layout/Layout";
 
 // Fix for default marker icons in react-leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -27,7 +28,7 @@ const Map = () => {
   // Marinduque Province coordinates (center of the province)
   const marinduqueCenter = [13.4167, 121.9167];
   const defaultZoom = 10;
-  const [activeLayer, setActiveLayer] = useState("standard");
+  const [activeLayer, setActiveLayer] = useState("satellite");
 
   const baseLayers = useMemo(
     () => ({
@@ -42,90 +43,86 @@ const Map = () => {
         id: "satellite",
         label: "Satellite",
         // Esri World Imagery tiles
-        url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        attribution:
-          "Tiles &copy; Esri &mdash; Source: Esri, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community",
+        // url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        // // attribution:
+        //   "Tiles &copy; Esri &mdash; Source: Esri, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community",
       },
     }),
     []
   );
 
   return (
-    <div className="h-screen w-full flex flex-col bg-gray-100">
-      {/* Header */}
-      <div className="bg-white shadow-md z-10 px-6 py-4">
-        <h1 className="text-2xl font-bold text-gray-800">
-          Province of Marinduque
-        </h1>
-        <p className="text-sm text-gray-600 mt-1">Monitoring Dashboard</p>
-      </div>
+    <Layout activeSection="map">
+      <div className="h-full w-full flex flex-col bg-gray-100">
+        {/* Map Container */}
+        <div className="flex-1 relative min-h-0">
+          <MapContainer
+            center={marinduqueCenter}
+            zoom={defaultZoom}
+            scrollWheelZoom={true}
+            className="h-full w-full z-0"
+            style={{ height: "100%", width: "100%" }}
+          >
+            <TileLayer
+              key={activeLayer}
+              attribution={baseLayers[activeLayer].attribution}
+              url={baseLayers[activeLayer].url}
+            />
+            <MapView center={marinduqueCenter} zoom={defaultZoom} />
 
-      {/* Map Container */}
-      <div className="flex-1 relative">
-        <MapContainer
-          center={marinduqueCenter}
-          zoom={defaultZoom}
-          scrollWheelZoom={true}
-          className="h-full w-full z-0"
-          style={{ height: "100%", width: "100%" }}
-        >
-          <TileLayer
-            key={activeLayer}
-            attribution={baseLayers[activeLayer].attribution}
-            url={baseLayers[activeLayer].url}
-          />
-          <MapView center={marinduqueCenter} zoom={defaultZoom} />
+            {/* Marker for Marinduque Center */}
+            <Marker position={marinduqueCenter}>
+              <Popup>
+                <div className="text-center">
+                  <h3 className="font-semibold text-gray-800">
+                    Province of Marinduque
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">Philippines</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Coordinates: 13.4167°N, 121.9167°E
+                  </p>
+                </div>
+              </Popup>
+            </Marker>
+          </MapContainer>
 
-          {/* Marker for Marinduque Center */}
-          <Marker position={marinduqueCenter}>
-            <Popup>
-              <div className="text-center">
-                <h3 className="font-semibold text-gray-800">
-                  Province of Marinduque
-                </h3>
-                <p className="text-sm text-gray-600 mt-1">Philippines</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Coordinates: 13.4167°N, 121.9167°E
-                </p>
-              </div>
-            </Popup>
-          </Marker>
-        </MapContainer>
-
-        {/* Map Controls Overlay */}
-        <div className="absolute top-4 right-4 z-[1000] space-y-3">
-          <div className="bg-white rounded-lg shadow-lg p-3">
-            <div className="space-y-2">
-              <div className="text-xs font-semibold text-gray-700">Layers</div>
-              <div className="flex gap-2">
-                {Object.values(baseLayers).map((layer) => (
-                  <button
-                    key={layer.id}
-                    type="button"
-                    onClick={() => setActiveLayer(layer.id)}
-                    className={`px-3 py-1 text-xs font-medium rounded-full border ${
-                      activeLayer === layer.id
-                        ? "bg-indigo-600 text-white border-indigo-600"
-                        : "bg-white text-gray-700 border-gray-300"
-                    }`}
-                  >
-                    {layer.label}
-                  </button>
-                ))}
+          {/* Map Controls Overlay */}
+          <div className="absolute top-4 right-4 z-[1000] space-y-3">
+            <div className="bg-white rounded-lg shadow-lg p-3">
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-gray-700">
+                  Layers
+                </div>
+                <div className="flex gap-2">
+                  {Object.values(baseLayers).map((layer) => (
+                    <button
+                      key={layer.id}
+                      type="button"
+                      onClick={() => setActiveLayer(layer.id)}
+                      className={`px-3 py-1 text-xs font-medium rounded-full border ${
+                        activeLayer === layer.id
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "bg-white text-gray-700 border-gray-300"
+                      }`}
+                    >
+                      {layer.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="bg-white rounded-lg shadow-lg p-3">
-            <div className="space-y-1 text-xs text-gray-600">
-              <div className="font-semibold text-gray-700">Map Controls</div>
-              <p>Use mouse wheel to zoom</p>
-              <p>Click and drag to pan</p>
+            <div className="bg-white rounded-lg shadow-lg p-3">
+              <div className="space-y-1 text-xs text-gray-600">
+                <div className="font-semibold text-gray-700">Map Controls</div>
+                <p>Use mouse wheel to zoom</p>
+                <p>Click and drag to pan</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 };
 
