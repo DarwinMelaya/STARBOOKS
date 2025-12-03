@@ -5,3 +5,4 @@ export { default as Login } from "./auth/Login";
 
 // interface
 export { default as Map } from "./Interface/Map";
+export { default as Add } from "./Interface/Add";
