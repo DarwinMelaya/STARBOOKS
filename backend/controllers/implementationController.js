@@ -81,9 +81,42 @@ const getImplementations = async (req, res) => {
   }
 };
 
+// Update implementation status
+const updateImplementationStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { implemented } = req.body;
+
+    const implementation = await Implementation.findByIdAndUpdate(
+      id,
+      { implemented },
+      { new: true }
+    );
+
+    if (!implementation) {
+      return res.status(404).json({
+        success: false,
+        message: "Implementation record not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Status updated successfully",
+      data: implementation,
+    });
+  } catch (error) {
+    console.error("Error updating status:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating status",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createImplementation,
   getImplementations,
+  updateImplementationStatus,
 };
-
-
