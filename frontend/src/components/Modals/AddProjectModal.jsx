@@ -1,0 +1,163 @@
+import { useState } from "react";
+import api from "../../utils/api";
+import toast from "react-hot-toast";
+
+const AddProjectModal = ({ isOpen, onClose, onSuccess }) => {
+  const [formData, setFormData] = useState({
+    projectTitle: "",
+    location: "",
+    coordinates: "",
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!formData.projectTitle || !formData.location || !formData.coordinates) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const payload = {
+        projectTitle: formData.projectTitle,
+        location: formData.location,
+        coordinates: formData.coordinates,
+      };
+
+      const res = await api.post("/projects", payload);
+
+      if (res.data?.success) {
+        toast.success("Project record saved");
+        setFormData({
+          projectTitle: "",
+          location: "",
+          coordinates: "",
+        });
+        onSuccess?.();
+        onClose();
+      } else {
+        toast.error(res.data?.message || "Failed to save record");
+      }
+    } catch (error) {
+      const msg = error.response?.data?.message || "Failed to save project";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="bg-[#0b2545] text-blue-50 rounded-2xl shadow-2xl border border-white/10 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+          <div>
+            <h3 className="text-xl font-bold">Add Project</h3>
+            <p className="text-xs text-blue-100 mt-1">
+              Record a new project with location and coordinates.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-xs px-3 py-1 rounded-full border border-blue-300/60 hover:bg-blue-500/20"
+          >
+            Close
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label
+              htmlFor="projectTitle"
+              className="block text-sm font-medium text-blue-100 mb-1"
+            >
+              Project Title
+            </label>
+            <input
+              id="projectTitle"
+              name="projectTitle"
+              type="text"
+              value={formData.projectTitle}
+              onChange={handleChange}
+              className="block w-full rounded-md border border-blue-400/40 px-3 py-2 text-sm shadow-sm focus:border-indigo-400 focus:ring-indigo-400 bg-white text-gray-900 placeholder-gray-400"
+              placeholder="e.g. Project 1"
+              required
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="location"
+              className="block text-sm font-medium text-blue-100 mb-1"
+            >
+              Location
+            </label>
+            <input
+              id="location"
+              name="location"
+              type="text"
+              value={formData.location}
+              onChange={handleChange}
+              className="block w-full rounded-md border border-blue-400/40 px-3 py-2 text-sm shadow-sm focus:border-indigo-400 focus:ring-indigo-400 bg-white text-gray-900 placeholder-gray-400"
+              placeholder="e.g. Sta Cruz, Marinduque"
+              required
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="coordinates"
+              className="block text-sm font-medium text-blue-100 mb-1"
+            >
+              Coordinates
+            </label>
+            <input
+              id="coordinates"
+              name="coordinates"
+              type="text"
+              value={formData.coordinates}
+              onChange={handleChange}
+              className="block w-full rounded-md border border-blue-400/40 px-3 py-2 text-sm shadow-sm focus:border-indigo-400 focus:ring-indigo-400 bg-white text-gray-900 placeholder-gray-400"
+              placeholder="e.g. 13.503800231301934, 122.08868404262736"
+              required
+            />
+            <p className="mt-1 text-xs text-blue-200">
+              Use format: latitude, longitude
+            </p>
+          </div>
+
+          <div className="pt-2 flex gap-3">
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex items-center justify-center rounded-md bg-indigo-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-[#0b2545] disabled:opacity-50"
+            >
+              {loading ? "Saving..." : "Save Project"}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center justify-center rounded-md border border-blue-300/60 px-4 py-2 text-sm font-medium text-blue-100 hover:bg-blue-500/20"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default AddProjectModal;

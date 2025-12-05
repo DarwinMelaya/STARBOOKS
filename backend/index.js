@@ -4,6 +4,7 @@ const cors = require("cors");
 const connectDB = require("./config/database");
 const userRoutes = require("./routes/userRoutes");
 const implementationRoutes = require("./routes/implementationRoutes");
+const projectRoutes = require("./routes/projectRoutes");
 
 // Connect to database
 connectDB();
@@ -19,6 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use("/api/users", userRoutes);
 app.use("/api/implementations", implementationRoutes);
+app.use("/api/projects", projectRoutes);
 
 // Health check route
 app.get("/", (req, res) => {
