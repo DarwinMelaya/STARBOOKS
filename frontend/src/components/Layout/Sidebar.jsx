@@ -41,38 +41,77 @@ const Sidebar = ({ active = "map", onSelect, isOpen, onClose }) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed md:static top-0 left-0 z-50 w-64 md:w-56 bg-[#0b2545] text-white shadow-xl flex flex-col h-screen transition-transform duration-300 ease-in-out ${
+        className={`fixed md:static top-0 left-0 z-50 w-72 md:w-60 text-slate-100 h-screen transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
-        <div className="px-4 py-6 border-b border-white/10">
-          <p className="text-xs uppercase tracking-[0.3em] text-blue-200">DOST</p>
-          <h2 className="text-xl font-bold">STARBOOKS</h2>
-          <p className="text-[0.7rem] text-blue-100">Monitoring Suite</p>
-        </div>
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(99,102,241,0.16),transparent_35%),radial-gradient(circle_at_80%_10%,rgba(16,185,129,0.12),transparent_30%),radial-gradient(circle_at_50%_80%,rgba(236,72,153,0.12),transparent_30%)] blur-3xl" />
+        <div className="absolute inset-0 border border-slate-800/80 rounded-none shadow-2xl shadow-black/50" />
 
-        <nav className="flex-1 px-3 py-6 space-y-2">
-          {menuItems.map((item) => {
-            const isActive = active === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => handleClick(item.id)}
-                className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all border ${
-                  isActive
-                    ? "bg-blue-500/20 border-blue-400 text-white shadow-lg"
-                    : "bg-white/5 border-white/10 text-blue-100 hover:bg-white/10"
-                }`}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-        </nav>
+        <div className="relative flex flex-col h-full backdrop-blur-xl">
+          <div className="px-5 py-6 border-b border-slate-800/70">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-800/40">
+                <span className="text-lg font-semibold text-white">PM</span>
+              </div>
+              <div>
+                <p className="text-[0.65rem] uppercase tracking-[0.32em] text-indigo-200/80">
+                  DOST - Project Monitoring
+                </p>
+                <h2 className="text-lg font-semibold text-white leading-tight">
+                  Science and Technology Atlas
+                </h2>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center gap-2 text-xs text-emerald-100/80">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              Live map access
+            </div>
+          </div>
 
-        <div className="px-4 py-4 border-t border-white/10 text-xs text-blue-100">
-          Department of Science and Technology
+          <nav className="relative flex-1 px-4 py-6 space-y-2">
+            {menuItems.map((item) => {
+              const isActive = active === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleClick(item.id)}
+                  className={`group w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all border backdrop-blur ${
+                    isActive
+                      ? "bg-gradient-to-r from-indigo-500/25 via-purple-600/25 to-cyan-400/25 border-indigo-400/50 text-white shadow-lg shadow-indigo-800/40"
+                      : "bg-slate-900/60 border-slate-800/70 text-slate-200 hover:border-indigo-400/40 hover:bg-slate-900/80 hover:shadow-lg hover:shadow-indigo-900/30"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span>{item.label}</span>
+                    <span
+                      className={`h-2 w-2 rounded-full transition ${
+                        isActive
+                          ? "bg-emerald-400 shadow-[0_0_0_4px] shadow-emerald-400/30"
+                          : "bg-slate-600 group-hover:bg-indigo-400"
+                      }`}
+                    />
+                  </div>
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="relative px-5 py-5 border-t border-slate-800/70 text-xs text-slate-300/80">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-md shadow-indigo-900/40">
+                D
+              </div>
+              <div>
+                <p className="font-semibold text-white">
+                  Department of Science and Technology
+                </p>
+                <p className="text-[0.7rem] text-slate-400">Philippines</p>
+              </div>
+            </div>
+          </div>
         </div>
       </aside>
     </>
@@ -84,7 +123,7 @@ export const BurgerMenu = ({ onClick, isOpen }) => {
   return (
     <button
       onClick={onClick}
-      className="md:hidden fixed top-4 left-4 z-[60] w-12 h-12 bg-gradient-to-br from-[#0b2545] to-[#0a1f3d] rounded-xl shadow-2xl border border-white/10 backdrop-blur-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-300"
+      className="md:hidden fixed top-4 left-4 z-[60] w-12 h-12 bg-gradient-to-br from-indigo-600 via-purple-600 to-cyan-500 rounded-xl shadow-2xl shadow-indigo-900/50 border border-white/10 backdrop-blur-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-300"
       aria-label="Toggle menu"
     >
       <div className="relative w-6 h-6">
