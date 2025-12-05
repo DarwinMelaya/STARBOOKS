@@ -35,12 +35,6 @@ const Home = () => {
               >
                 Open Map
               </button>
-              <button
-                onClick={() => navigate("/auth/login")}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/60 px-5 py-3 text-sm font-semibold text-slate-200 shadow-lg shadow-black/30 transition hover:border-indigo-400/50 hover:bg-slate-900/80"
-              >
-                Sign in
-              </button>
             </div>
           </div>
 

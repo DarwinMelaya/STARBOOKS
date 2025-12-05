@@ -52,8 +52,12 @@ const Sidebar = ({ active = "map", onSelect, isOpen, onClose }) => {
         <div className="relative flex flex-col h-full backdrop-blur-xl">
           <div className="px-5 py-6 border-b border-slate-800/70">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-800/40">
-                <span className="text-lg font-semibold text-white">PM</span>
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-800/40 overflow-hidden">
+                <img
+                  src="/logo.png"
+                  alt="Project Monitoring Logo"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div>
                 <p className="text-[0.65rem] uppercase tracking-[0.32em] text-indigo-200/80">
