@@ -2,7 +2,8 @@ import { useNavigate } from "react-router-dom";
 
 const menuItems = [
   { id: "map", label: "Map" },
-  { id: "add", label: "Add" },
+  { id: "add", label: "Add Starbooks" },
+  { id: "add-projects", label: "Add Projects" },
   { id: "report", label: "Report" },
 ];
 
@@ -16,6 +17,8 @@ const Sidebar = ({ active = "map", onSelect }) => {
       navigate("/map");
     } else if (id === "add") {
       navigate("/add");
+    } else if (id === "add-projects") {
+      navigate("/add-projects");
     } else if (id === "report") {
       navigate("/report");
     }
