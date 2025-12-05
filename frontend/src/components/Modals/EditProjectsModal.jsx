@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../../utils/api";
 import toast from "react-hot-toast";
 
-const AddProjectModal = ({ isOpen, onClose, onSuccess }) => {
+const EditProjectsModal = ({ isOpen, onClose, onSuccess, project }) => {
   const [formData, setFormData] = useState({
     projectTitle: "",
     location: "",
@@ -11,14 +11,16 @@ const AddProjectModal = ({ isOpen, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
+    if (project && isOpen) {
       setFormData({
-        projectTitle: "",
-        location: "",
-        coordinates: "",
+        projectTitle: project.projectTitle || "",
+        location: project.location || "",
+        coordinates: project.coordinates
+          ? `${project.coordinates.lat ?? ""}, ${project.coordinates.lng ?? ""}`
+          : "",
       });
     }
-  }, [isOpen]);
+  }, [project, isOpen]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -58,38 +60,33 @@ const AddProjectModal = ({ isOpen, onClose, onSuccess }) => {
         coordinates: { lat, lng },
       };
 
-      const res = await api.post("/projects", payload);
+      const res = await api.patch(`/projects/${project?._id}`, payload);
 
       if (res.data?.success) {
-        toast.success("Project record saved");
-        setFormData({
-          projectTitle: "",
-          location: "",
-          coordinates: "",
-        });
+        toast.success("Project updated");
         onSuccess?.();
         onClose();
       } else {
-        toast.error(res.data?.message || "Failed to save record");
+        toast.error(res.data?.message || "Failed to update record");
       }
     } catch (error) {
-      const msg = error.response?.data?.message || "Failed to save project";
+      const msg = error.response?.data?.message || "Failed to update project";
       toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !project) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="bg-[#0b2545] text-blue-50 rounded-2xl shadow-2xl border border-white/10 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
           <div>
-            <h3 className="text-xl font-bold">Add Project</h3>
+            <h3 className="text-xl font-bold">Edit Project</h3>
             <p className="text-xs text-blue-100 mt-1">
-              Record a new project with location and coordinates.
+              Update project details and coordinates.
             </p>
           </div>
           <button
@@ -168,7 +165,7 @@ const AddProjectModal = ({ isOpen, onClose, onSuccess }) => {
               disabled={loading}
               className="inline-flex items-center justify-center rounded-md bg-indigo-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-[#0b2545] disabled:opacity-50"
             >
-              {loading ? "Saving..." : "Save Project"}
+              {loading ? "Saving..." : "Save Changes"}
             </button>
             <button
               type="button"
@@ -184,4 +181,4 @@ const AddProjectModal = ({ isOpen, onClose, onSuccess }) => {
   );
 };
 
-export default AddProjectModal;
+export default EditProjectsModal;

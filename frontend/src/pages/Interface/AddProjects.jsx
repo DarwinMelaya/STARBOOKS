@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import Layout from "../../components/Layout/Layout";
 import AddProjectModal from "../../components/Modals/AddProjectModal";
+import EditProjectsModal from "../../components/Modals/EditProjectsModal";
 import api from "../../utils/api";
 
 const AddProjects = () => {
   const [projects, setProjects] = useState([]);
   const [loadingList, setLoadingList] = useState(true);
   const [listError, setListError] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState(null);
 
   const fetchProjects = async () => {
     try {
@@ -31,6 +34,25 @@ const AddProjects = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const openAddModal = () => {
+    setEditingProject(null);
+    setIsAddModalOpen(true);
+  };
+
+  const openEditModal = (project) => {
+    setEditingProject(project);
+    setIsEditModalOpen(true);
+  };
+
+  const closeAddModal = () => {
+    setIsAddModalOpen(false);
+  };
+
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditingProject(null);
+  };
+
   return (
     <Layout activeSection="add-projects">
       <div className="h-full w-full flex flex-col bg-[#030b1a]">
@@ -45,7 +67,7 @@ const AddProjects = () => {
             </div>
             <button
               type="button"
-              onClick={() => setIsModalOpen(true)}
+              onClick={openAddModal}
               className="text-sm px-4 py-2 rounded-full border border-blue-300/60 bg-indigo-500 hover:bg-indigo-600 text-white font-medium"
             >
               Add Project
@@ -79,6 +101,9 @@ const AddProjects = () => {
                       <th className="px-4 py-3 text-left text-xs font-medium text-blue-100 uppercase tracking-wider">
                         Created
                       </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-blue-100 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-blue-300/10">
@@ -101,6 +126,15 @@ const AddProjects = () => {
                             timeStyle: "short",
                           })}
                         </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-xs text-blue-100">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(project)}
+                            className="px-3 py-1 rounded-full border border-blue-300/60 hover:bg-blue-500/20 text-blue-50 text-xs font-medium"
+                          >
+                            Edit
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -112,9 +146,17 @@ const AddProjects = () => {
 
         {/* Add Project Modal */}
         <AddProjectModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          isOpen={isAddModalOpen}
+          onClose={closeAddModal}
           onSuccess={fetchProjects}
+        />
+
+        {/* Edit Project Modal */}
+        <EditProjectsModal
+          isOpen={isEditModalOpen}
+          onClose={closeEditModal}
+          onSuccess={fetchProjects}
+          project={editingProject}
         />
       </div>
     </Layout>
