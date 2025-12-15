@@ -96,6 +96,9 @@ const AddProjects = () => {
                         Location
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-blue-100 uppercase tracking-wider">
+                        Program Type
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-blue-100 uppercase tracking-wider">
                         Coordinates
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-blue-100 uppercase tracking-wider">
@@ -114,6 +117,9 @@ const AddProjects = () => {
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-blue-100">
                           {project.location}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-blue-100">
+                          {project.programType || "N/A"}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-xs text-blue-100">
                           Lat: {project.coordinates.lat.toFixed(6)}

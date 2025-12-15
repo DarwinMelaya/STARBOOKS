@@ -22,6 +22,15 @@ const projectSchema = new mongoose.Schema(
         required: [true, "Longitude is required"],
       },
     },
+    programType: {
+      type: String,
+      required: [true, "Program type is required"],
+      enum: [
+        "GIA: Grants-In-Aid Program",
+        "SETUP: Small Enterprise Technology Upgrading Program",
+        "CEST: Community Empowerment through Science and Technology Program",
+      ],
+    },
   },
   {
     timestamps: true,

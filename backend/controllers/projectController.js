@@ -3,12 +3,12 @@ const Project = require("../models/Project");
 // Create new project record
 const createProject = async (req, res) => {
   try {
-    const { projectTitle, location, coordinates } = req.body;
+    const { projectTitle, location, coordinates, programType } = req.body;
 
-    if (!projectTitle || !location || !coordinates) {
+    if (!projectTitle || !location || !coordinates || !programType) {
       return res.status(400).json({
         success: false,
-        message: "Project title, location, and coordinates are required",
+        message: "Project title, location, coordinates, and program type are required",
       });
     }
 
@@ -45,6 +45,7 @@ const createProject = async (req, res) => {
       projectTitle,
       location,
       coordinates: { lat, lng },
+      programType,
     });
 
     res.status(201).json({
@@ -112,11 +113,12 @@ const getProjectById = async (req, res) => {
 const updateProject = async (req, res) => {
   try {
     const { id } = req.params;
-    const { projectTitle, location, coordinates } = req.body;
+    const { projectTitle, location, coordinates, programType } = req.body;
 
     const updateData = {};
     if (projectTitle) updateData.projectTitle = projectTitle;
     if (location) updateData.location = location;
+    if (programType) updateData.programType = programType;
     if (coordinates) {
       let lat;
       let lng;

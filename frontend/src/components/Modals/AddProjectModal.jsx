@@ -7,6 +7,7 @@ const AddProjectModal = ({ isOpen, onClose, onSuccess }) => {
     projectTitle: "",
     location: "",
     coordinates: "",
+    programType: "",
   });
   const [loading, setLoading] = useState(false);
 
@@ -16,6 +17,7 @@ const AddProjectModal = ({ isOpen, onClose, onSuccess }) => {
         projectTitle: "",
         location: "",
         coordinates: "",
+        programType: "",
       });
     }
   }, [isOpen]);
@@ -31,7 +33,7 @@ const AddProjectModal = ({ isOpen, onClose, onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.projectTitle || !formData.location || !formData.coordinates) {
+    if (!formData.projectTitle || !formData.location || !formData.coordinates || !formData.programType) {
       toast.error("Please fill in all fields");
       return;
     }
@@ -56,6 +58,7 @@ const AddProjectModal = ({ isOpen, onClose, onSuccess }) => {
         projectTitle: formData.projectTitle,
         location: formData.location,
         coordinates: { lat, lng },
+        programType: formData.programType,
       };
 
       const res = await api.post("/projects", payload);
@@ -66,6 +69,7 @@ const AddProjectModal = ({ isOpen, onClose, onSuccess }) => {
           projectTitle: "",
           location: "",
           coordinates: "",
+          programType: "",
         });
         onSuccess?.();
         onClose();
@@ -138,6 +142,34 @@ const AddProjectModal = ({ isOpen, onClose, onSuccess }) => {
               placeholder="e.g. Sta Cruz, Marinduque"
               required
             />
+          </div>
+
+          <div>
+            <label
+              htmlFor="programType"
+              className="block text-sm font-medium text-blue-100 mb-1"
+            >
+              Program Type
+            </label>
+            <select
+              id="programType"
+              name="programType"
+              value={formData.programType}
+              onChange={handleChange}
+              className="block w-full rounded-md border border-blue-400/40 px-3 py-2 text-sm shadow-sm focus:border-indigo-400 focus:ring-indigo-400 bg-white text-gray-900"
+              required
+            >
+              <option value="">Select a program type</option>
+              <option value="GIA: Grants-In-Aid Program">
+                GIA: Grants-In-Aid Program
+              </option>
+              <option value="SETUP: Small Enterprise Technology Upgrading Program">
+                SETUP: Small Enterprise Technology Upgrading Program
+              </option>
+              <option value="CEST: Community Empowerment through Science and Technology Program">
+                CEST: Community Empowerment through Science and Technology Program
+              </option>
+            </select>
           </div>
 
           <div>
