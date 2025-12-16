@@ -33,7 +33,12 @@ const AddProjectModal = ({ isOpen, onClose, onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.projectTitle || !formData.location || !formData.coordinates || !formData.programType) {
+    if (
+      !formData.projectTitle ||
+      !formData.location ||
+      !formData.coordinates ||
+      !formData.programType
+    ) {
       toast.error("Please fill in all fields");
       return;
     }
@@ -167,7 +172,11 @@ const AddProjectModal = ({ isOpen, onClose, onSuccess }) => {
                 SETUP: Small Enterprise Technology Upgrading Program
               </option>
               <option value="CEST: Community Empowerment through Science and Technology Program">
-                CEST: Community Empowerment through Science and Technology Program
+                CEST: Community Empowerment through Science and Technology
+                Program
+              </option>
+              <option value="SSCP: Smart and Sustainable Communities Program">
+                SSCP: Smart and Sustainable Communities Program
               </option>
             </select>
           </div>

@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import Layout from "../../components/Layout/Layout";
 import api from "../../utils/api";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import toast from "react-hot-toast";
 
 // Fix for default marker icons in react-leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -122,14 +125,49 @@ const createCustomMarkerIcon = (isImplemented) => {
   });
 };
 
-// Create custom marker icon for projects (different style - blue/indigo)
-const createProjectMarkerIcon = () => {
-  const color = {
-    primary: "#6366f1", // indigo-500
-    secondary: "#4f46e5", // indigo-600
-    light: "#e0e7ff", // indigo-100
-    ring: "#818cf8", // indigo-400
+// Get color scheme based on program type
+const getProgramTypeColors = (programType) => {
+  const colorMap = {
+    "GIA: Grants-In-Aid Program": {
+      primary: "#10b981", // emerald-500
+      secondary: "#059669", // emerald-600
+      light: "#d1fae5", // emerald-100
+      ring: "#34d399", // emerald-400
+    },
+    "SETUP: Small Enterprise Technology Upgrading Program": {
+      primary: "#f59e0b", // amber-500
+      secondary: "#d97706", // amber-600
+      light: "#fef3c7", // amber-100
+      ring: "#fbbf24", // amber-400
+    },
+    "CEST: Community Empowerment through Science and Technology Program": {
+      primary: "#8b5cf6", // violet-500
+      secondary: "#7c3aed", // violet-600
+      light: "#ede9fe", // violet-100
+      ring: "#a78bfa", // violet-400
+    },
+    "SSCP: Smart and Sustainable Communities Program": {
+      primary: "#06b6d4", // cyan-500
+      secondary: "#0891b2", // cyan-600
+      light: "#cffafe", // cyan-100
+      ring: "#22d3ee", // cyan-400
+    },
   };
+
+  // Default to indigo if program type not found
+  return (
+    colorMap[programType] || {
+      primary: "#6366f1", // indigo-500
+      secondary: "#4f46e5", // indigo-600
+      light: "#e0e7ff", // indigo-100
+      ring: "#818cf8", // indigo-400
+    }
+  );
+};
+
+// Create custom marker icon for projects (different style based on program type)
+const createProjectMarkerIcon = (programType) => {
+  const color = getProgramTypeColors(programType);
 
   const iconHtml = `
     <div style="
@@ -238,6 +276,8 @@ const Map = () => {
   const [showSTARBOOKS, setShowSTARBOOKS] = useState(true);
   const [showProjects, setShowProjects] = useState(true);
   const [showControls, setShowControls] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const mapContainerRef = useRef(null);
 
   const baseLayers = useMemo(
     () => ({
@@ -302,6 +342,161 @@ const Map = () => {
     fetchProjects();
   }, []);
 
+  const exportMapAsPNG = async () => {
+    if (!mapContainerRef.current) {
+      toast.error("Map container not found");
+      return;
+    }
+
+    setExporting(true);
+    try {
+      // Hide controls temporarily for clean export
+      const originalShowControls = showControls;
+      if (showControls) {
+        setShowControls(false);
+        // Wait for controls to hide
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+
+      // Wait a bit for map to stabilize
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      const mapElement =
+        mapContainerRef.current.querySelector(".leaflet-container");
+      if (!mapElement) {
+        toast.error("Map element not found");
+        if (originalShowControls) {
+          setShowControls(true);
+        }
+        return;
+      }
+
+      toast.loading("Capturing map...", { id: "export-toast" });
+
+      const canvas = await html2canvas(mapElement, {
+        backgroundColor: "#f3f4f6",
+        useCORS: true,
+        scale: 2,
+        logging: false,
+        width: mapElement.offsetWidth,
+        height: mapElement.offsetHeight,
+        windowWidth: mapElement.offsetWidth,
+        windowHeight: mapElement.offsetHeight,
+      });
+
+      // Create download link
+      const link = document.createElement("a");
+      link.download = `DOST-Project-Map-${
+        new Date().toISOString().split("T")[0]
+      }.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+
+      toast.success("Map exported as PNG successfully", { id: "export-toast" });
+
+      // Restore controls
+      if (originalShowControls) {
+        setShowControls(true);
+      }
+    } catch (error) {
+      console.error("Error exporting map as PNG:", error);
+      toast.error("Failed to export map as PNG", { id: "export-toast" });
+      setShowControls(showControls);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportMapAsPDF = async () => {
+    if (!mapContainerRef.current) {
+      toast.error("Map container not found");
+      return;
+    }
+
+    setExporting(true);
+    try {
+      // Hide controls temporarily for clean export
+      const originalShowControls = showControls;
+      if (showControls) {
+        setShowControls(false);
+        // Wait for controls to hide
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+
+      // Wait a bit for map to stabilize
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      const mapElement =
+        mapContainerRef.current.querySelector(".leaflet-container");
+      if (!mapElement) {
+        toast.error("Map element not found");
+        if (originalShowControls) {
+          setShowControls(true);
+        }
+        return;
+      }
+
+      toast.loading("Generating PDF...", { id: "export-toast" });
+
+      const canvas = await html2canvas(mapElement, {
+        backgroundColor: "#f3f4f6",
+        useCORS: true,
+        scale: 2,
+        logging: false,
+        width: mapElement.offsetWidth,
+        height: mapElement.offsetHeight,
+        windowWidth: mapElement.offsetWidth,
+        windowHeight: mapElement.offsetHeight,
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+
+      // Calculate PDF dimensions (A4 landscape)
+      const pdfWidth = 297; // A4 width in mm (landscape)
+      const pdfHeight = 210; // A4 height in mm (landscape)
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const imgWidthInMM = imgWidth * ratio;
+      const imgHeightInMM = imgHeight * ratio;
+
+      const pdf = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: "a4",
+      });
+
+      // Center the image
+      const xOffset = (pdfWidth - imgWidthInMM) / 2;
+      const yOffset = (pdfHeight - imgHeightInMM) / 2;
+
+      pdf.addImage(
+        imgData,
+        "PNG",
+        xOffset,
+        yOffset,
+        imgWidthInMM,
+        imgHeightInMM
+      );
+      pdf.save(
+        `DOST-Project-Map-${new Date().toISOString().split("T")[0]}.pdf`
+      );
+
+      toast.success("Map exported as PDF successfully", { id: "export-toast" });
+
+      // Restore controls
+      if (originalShowControls) {
+        setShowControls(true);
+      }
+    } catch (error) {
+      console.error("Error exporting map as PDF:", error);
+      toast.error("Failed to export map as PDF", { id: "export-toast" });
+      setShowControls(showControls);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <Layout activeSection="map">
       <style>{`
@@ -351,7 +546,7 @@ const Map = () => {
       `}</style>
       <div className="h-full w-full flex flex-col bg-gray-100">
         {/* Map Container */}
-        <div className="flex-1 relative min-h-0">
+        <div ref={mapContainerRef} className="flex-1 relative min-h-0">
           <MapContainer
             center={marinduqueCenter}
             zoom={defaultZoom}
@@ -512,7 +707,7 @@ const Map = () => {
                 <Marker
                   key={`project-${project._id}`}
                   position={[project.coordinates.lat, project.coordinates.lng]}
-                  icon={createProjectMarkerIcon()}
+                  icon={createProjectMarkerIcon(project.programType)}
                 >
                   <Popup
                     className="custom-popup"
@@ -520,125 +715,154 @@ const Map = () => {
                     autoPan={true}
                   >
                     <div className="text-left min-w-[200px]">
-                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-indigo-200">
-                        <div className="w-3 h-3 rounded-full bg-indigo-500 animate-pulse"></div>
-                        <h3 className="font-bold text-gray-800 text-base">
-                          {project.projectTitle}
-                        </h3>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">
+                      {(() => {
+                        const colors = getProgramTypeColors(
+                          project.programType
+                        );
+                        return (
+                          <>
+                            <div
+                              className="flex items-center gap-2 mb-2 pb-2 border-b"
+                              style={{
+                                borderColor: `${colors.ring}80`,
+                              }}
+                            >
+                              <div
+                                className="w-3 h-3 rounded-full animate-pulse"
+                                style={{ backgroundColor: colors.primary }}
+                              ></div>
+                              <h3 className="font-bold text-gray-800 text-base">
+                                {project.projectTitle}
+                              </h3>
+                            </div>
+                            <div className="space-y-2">
+                              <div
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+                                style={{
+                                  backgroundColor: colors.light,
+                                  color: colors.secondary,
+                                }}
+                              >
+                                <svg
+                                  width="12"
+                                  height="12"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                >
+                                  <path
+                                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                                {project.programType?.split(":")[0] ||
+                                  "Project"}
+                              </div>
+                              {project.programType && (
+                                <p
+                                  className="text-xs font-medium"
+                                  style={{ color: colors.secondary }}
+                                >
+                                  {project.programType}
+                                </p>
+                              )}
+                            </div>
+                          </>
+                        );
+                      })()}
+                      <div className="text-xs text-gray-600 space-y-1 mt-3">
+                        <p className="flex items-center gap-1.5">
                           <svg
                             width="12"
                             height="12"
                             viewBox="0 0 24 24"
                             fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
+                            className="text-gray-400"
                           >
                             <path
-                              d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                              d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                            <circle
+                              cx="12"
+                              cy="10"
+                              r="3"
                               stroke="currentColor"
                               strokeWidth="2"
                               strokeLinecap="round"
                               strokeLinejoin="round"
                             />
                           </svg>
-                          Project
-                        </div>
-                        <div className="text-xs text-gray-600 space-y-1">
-                          <p className="flex items-center gap-1.5">
-                            <svg
-                              width="12"
-                              height="12"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              className="text-gray-400"
-                            >
-                              <path
-                                d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                              <circle
-                                cx="12"
-                                cy="10"
-                                r="3"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                            <span className="font-medium text-gray-800">
-                              {project.location}
-                            </span>
-                          </p>
-                          <p className="flex items-center gap-1.5">
-                            <svg
-                              width="12"
-                              height="12"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              className="text-gray-400"
-                            >
-                              <path
-                                d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                              <circle
-                                cx="12"
-                                cy="10"
-                                r="3"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                            <span className="font-mono">
-                              {project.coordinates.lat.toFixed(6)},{" "}
-                              {project.coordinates.lng.toFixed(6)}
-                            </span>
-                          </p>
-                          <p className="flex items-center gap-1.5 text-gray-500">
-                            <svg
-                              width="12"
-                              height="12"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              className="text-gray-400"
-                            >
-                              <circle
-                                cx="12"
-                                cy="12"
-                                r="10"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                              <polyline
-                                points="12 6 12 12 16 14"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                            {new Date(project.createdAt).toLocaleString(
-                              "en-PH",
-                              {
-                                dateStyle: "medium",
-                                timeStyle: "short",
-                              }
-                            )}
-                          </p>
-                        </div>
+                          <span className="font-medium text-gray-800">
+                            {project.location}
+                          </span>
+                        </p>
+                        <p className="flex items-center gap-1.5">
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            className="text-gray-400"
+                          >
+                            <path
+                              d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                            <circle
+                              cx="12"
+                              cy="10"
+                              r="3"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                          <span className="font-mono">
+                            {project.coordinates.lat.toFixed(6)},{" "}
+                            {project.coordinates.lng.toFixed(6)}
+                          </span>
+                        </p>
+                        <p className="flex items-center gap-1.5 text-gray-500">
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            className="text-gray-400"
+                          >
+                            <circle
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                            <polyline
+                              points="12 6 12 12 16 14"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                          {new Date(project.createdAt).toLocaleString("en-PH", {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}
+                        </p>
                       </div>
                     </div>
                   </Popup>
@@ -988,11 +1212,51 @@ const Map = () => {
                             {projects.length}
                           </span>
                         </p>
-                        <div className="flex items-center gap-1.5 pt-2">
-                          <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-sm shadow-indigo-500/50"></div>
-                          <span className="text-xs text-gray-400">
-                            Projects
-                          </span>
+                        <div className="space-y-2 pt-2 border-t border-gray-700">
+                          {(() => {
+                            const programTypeCounts = projects.reduce(
+                              (acc, project) => {
+                                const programType =
+                                  project.programType || "Unknown";
+                                acc[programType] = (acc[programType] || 0) + 1;
+                                return acc;
+                              },
+                              {}
+                            );
+
+                            return Object.entries(programTypeCounts).map(
+                              ([programType, count]) => {
+                                const colors =
+                                  getProgramTypeColors(programType);
+                                const shortName = programType.split(":")[0];
+                                return (
+                                  <div
+                                    key={programType}
+                                    className="flex items-center justify-between gap-2"
+                                  >
+                                    <div className="flex items-center gap-1.5">
+                                      <div
+                                        className="w-2.5 h-2.5 rounded-full shadow-sm"
+                                        style={{
+                                          backgroundColor: colors.primary,
+                                          boxShadow: `0 0 4px ${colors.ring}80`,
+                                        }}
+                                      ></div>
+                                      <span className="text-xs text-gray-400">
+                                        {shortName}
+                                      </span>
+                                    </div>
+                                    <span
+                                      className="text-xs font-semibold"
+                                      style={{ color: colors.primary }}
+                                    >
+                                      {count}
+                                    </span>
+                                  </div>
+                                );
+                              }
+                            );
+                          })()}
                         </div>
                       </div>
                     )}
@@ -1095,6 +1359,137 @@ const Map = () => {
                       <p className="text-xs text-gray-400">Click and drag</p>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Export Controls */}
+            <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-xl shadow-2xl border border-gray-700/50 backdrop-blur-xl p-4 md:p-5 w-full">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1 h-5 bg-gradient-to-b from-green-400 to-emerald-500 rounded-full"></div>
+                  <h3 className="font-bold text-white text-sm tracking-wide uppercase">
+                    Export Map
+                  </h3>
+                </div>
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={exportMapAsPNG}
+                    disabled={exporting}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg bg-gradient-to-r from-blue-500/20 to-indigo-600/20 border border-blue-400/50 hover:from-blue-500/30 hover:to-indigo-600/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400/20 to-indigo-500/20 flex items-center justify-center border border-blue-400/30">
+                      {exporting ? (
+                        <svg
+                          className="animate-spin h-4 w-4 text-blue-400"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                      ) : (
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          className="text-blue-400"
+                        >
+                          <path
+                            d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="text-xs font-semibold text-white">
+                        Export as PNG
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {exporting ? "Exporting..." : "Download map image"}
+                      </p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={exportMapAsPDF}
+                    disabled={exporting}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg bg-gradient-to-r from-red-500/20 to-pink-600/20 border border-red-400/50 hover:from-red-500/30 hover:to-pink-600/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-400/20 to-pink-500/20 flex items-center justify-center border border-red-400/30">
+                      {exporting ? (
+                        <svg
+                          className="animate-spin h-4 w-4 text-red-400"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                      ) : (
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          className="text-red-400"
+                        >
+                          <path
+                            d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M14 2v6h6M16 13H8M16 17H8M10 9H8"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="text-xs font-semibold text-white">
+                        Export as PDF
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {exporting ? "Exporting..." : "Download map document"}
+                      </p>
+                    </div>
+                  </button>
                 </div>
               </div>
             </div>

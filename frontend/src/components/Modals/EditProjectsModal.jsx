@@ -171,6 +171,9 @@ const EditProjectsModal = ({ isOpen, onClose, onSuccess, project }) => {
                 CEST: Community Empowerment through Science and Technology
                 Program
               </option>
+              <option value="SSCP: Smart and Sustainable Communities Program">
+                SSCP: Smart and Sustainable Communities Program
+              </option>
             </select>
           </div>
 

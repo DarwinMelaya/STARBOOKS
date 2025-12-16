@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Layout from "../../components/Layout/Layout";
 import AddProjectModal from "../../components/Modals/AddProjectModal";
 import EditProjectsModal from "../../components/Modals/EditProjectsModal";
+import DeleteProjectModal from "../../components/Modals/DeleteProjectModal";
 import api from "../../utils/api";
 
 const AddProjects = () => {
@@ -10,7 +11,9 @@ const AddProjects = () => {
   const [listError, setListError] = useState(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
+  const [deletingProject, setDeletingProject] = useState(null);
 
   const fetchProjects = async () => {
     try {
@@ -51,6 +54,16 @@ const AddProjects = () => {
   const closeEditModal = () => {
     setIsEditModalOpen(false);
     setEditingProject(null);
+  };
+
+  const openDeleteModal = (project) => {
+    setDeletingProject(project);
+    setIsDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setDeletingProject(null);
   };
 
   return (
@@ -133,13 +146,22 @@ const AddProjects = () => {
                           })}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-xs text-blue-100">
-                          <button
-                            type="button"
-                            onClick={() => openEditModal(project)}
-                            className="px-3 py-1 rounded-full border border-blue-300/60 hover:bg-blue-500/20 text-blue-50 text-xs font-medium"
-                          >
-                            Edit
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(project)}
+                              className="px-3 py-1 rounded-full border border-blue-300/60 hover:bg-blue-500/20 text-blue-50 text-xs font-medium"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openDeleteModal(project)}
+                              className="px-3 py-1 rounded-full border border-red-300/60 hover:bg-red-500/20 text-red-50 text-xs font-medium"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -163,6 +185,14 @@ const AddProjects = () => {
           onClose={closeEditModal}
           onSuccess={fetchProjects}
           project={editingProject}
+        />
+
+        {/* Delete Project Modal */}
+        <DeleteProjectModal
+          isOpen={isDeleteModalOpen}
+          onClose={closeDeleteModal}
+          onSuccess={fetchProjects}
+          project={deletingProject}
         />
       </div>
     </Layout>

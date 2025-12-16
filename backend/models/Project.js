@@ -29,6 +29,7 @@ const projectSchema = new mongoose.Schema(
         "GIA: Grants-In-Aid Program",
         "SETUP: Small Enterprise Technology Upgrading Program",
         "CEST: Community Empowerment through Science and Technology Program",
+        "SSCP: Smart and Sustainable Communities Program",
       ],
     },
   },
@@ -40,4 +41,3 @@ const projectSchema = new mongoose.Schema(
 const Project = mongoose.model("Project", projectSchema);
 
 module.exports = Project;
-
