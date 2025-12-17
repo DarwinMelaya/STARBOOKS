@@ -166,6 +166,89 @@ const getProgramTypeColors = (programType) => {
   );
 };
 
+// Create custom marker icon for user location
+const createUserLocationIcon = () => {
+  const iconHtml = `
+    <div style="
+      position: relative;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    ">
+      <!-- Outer pulsing ring -->
+      <div style="
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: #3b82f6;
+        opacity: 0.3;
+        animation: pulse-location 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      "></div>
+      
+      <!-- Middle ring -->
+      <div style="
+        position: absolute;
+        width: 80%;
+        height: 80%;
+        border-radius: 50%;
+        background: #3b82f6;
+        opacity: 0.5;
+        animation: pulse-location 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        animation-delay: 0.3s;
+      "></div>
+      
+      <!-- Inner circle -->
+      <div style="
+        position: relative;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #3b82f6;
+        border: 3px solid white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        z-index: 1;
+      "></div>
+      
+      <!-- Center dot -->
+      <div style="
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: white;
+        z-index: 2;
+      "></div>
+    </div>
+    <style>
+      @keyframes pulse-location {
+        0% {
+          transform: scale(1);
+          opacity: 0.3;
+        }
+        50% {
+          transform: scale(1.5);
+          opacity: 0.1;
+        }
+        100% {
+          transform: scale(1);
+          opacity: 0.3;
+        }
+      }
+    </style>
+  `;
+
+  return L.divIcon({
+    html: iconHtml,
+    className: "user-location-marker",
+    iconSize: [50, 50],
+    iconAnchor: [25, 25],
+    popupAnchor: [0, -25],
+  });
+};
+
 // Create custom marker icon for projects (different style based on program type)
 const createProjectMarkerIcon = (programType, projectTitle = "") => {
   const color = getProgramTypeColors(programType);
@@ -317,11 +400,14 @@ const createProjectMarkerIcon = (programType, projectTitle = "") => {
 };
 
 // Component to handle map view changes
-const MapView = ({ center, zoom }) => {
+const MapView = ({ center, zoom, onMapReady }) => {
   const map = useMap();
   useEffect(() => {
     map.setView(center, zoom);
-  }, [map, center, zoom]);
+    if (onMapReady) {
+      onMapReady(map);
+    }
+  }, [map, center, zoom, onMapReady]);
   return null;
 };
 
@@ -341,7 +427,12 @@ const Map = () => {
   const [showControls, setShowControls] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+  const [isTrackingLocation, setIsTrackingLocation] = useState(false);
+  const [locationError, setLocationError] = useState(null);
+  const watchIdRef = useRef(null);
   const mapContainerRef = useRef(null);
+  const mapRef = useRef(null);
 
   const baseLayers = useMemo(
     () => ({
@@ -405,6 +496,130 @@ const Map = () => {
     fetchImplementations();
     fetchProjects();
   }, []);
+
+  // Cleanup location watcher on unmount
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, []);
+
+  // Function to get user's current location
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      setLocationError("Geolocation not supported");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const location = { lat: latitude, lng: longitude };
+        setUserLocation(location);
+        setLocationError(null);
+
+        // Center map on user location
+        if (mapRef.current) {
+          mapRef.current.setView([latitude, longitude], 15);
+        }
+
+        toast.success("Location found!");
+      },
+      (error) => {
+        let errorMessage = "Failed to get location";
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = "Location access denied by user";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = "Location information unavailable";
+            break;
+          case error.TIMEOUT:
+            errorMessage = "Location request timed out";
+            break;
+        }
+        setLocationError(errorMessage);
+        toast.error(errorMessage);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  };
+
+  // Function to start/stop real-time location tracking
+  const toggleLocationTracking = () => {
+    if (isTrackingLocation) {
+      // Stop tracking
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+      setIsTrackingLocation(false);
+      toast.success("Location tracking stopped");
+    } else {
+      // Start tracking
+      if (!navigator.geolocation) {
+        toast.error("Geolocation is not supported by your browser");
+        return;
+      }
+
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const location = { lat: latitude, lng: longitude };
+          setUserLocation(location);
+          setLocationError(null);
+
+          // Smoothly pan to user location
+          if (mapRef.current) {
+            mapRef.current.setView(
+              [latitude, longitude],
+              mapRef.current.getZoom(),
+              {
+                animate: true,
+                duration: 1,
+              }
+            );
+          }
+        },
+        (error) => {
+          let errorMessage = "Failed to track location";
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = "Location access denied by user";
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = "Location information unavailable";
+              break;
+            case error.TIMEOUT:
+              errorMessage = "Location request timed out";
+              break;
+          }
+          setLocationError(errorMessage);
+          toast.error(errorMessage);
+          setIsTrackingLocation(false);
+          if (watchIdRef.current !== null) {
+            navigator.geolocation.clearWatch(watchIdRef.current);
+            watchIdRef.current = null;
+          }
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        }
+      );
+
+      setIsTrackingLocation(true);
+      toast.success("Real-time location tracking started");
+    }
+  };
 
   const exportMapAsPNG = async () => {
     if (!mapContainerRef.current) {
@@ -628,7 +843,13 @@ const Map = () => {
                 />
               );
             })()}
-            <MapView center={marinduqueCenter} zoom={defaultZoom} />
+            <MapView
+              center={marinduqueCenter}
+              zoom={defaultZoom}
+              onMapReady={(map) => {
+                mapRef.current = map;
+              }}
+            />
 
             {/* Markers for implementations */}
             {showSTARBOOKS &&
@@ -936,27 +1157,189 @@ const Map = () => {
                 </Marker>
               ))}
 
-            {/* Default marker if no points */}
-            {implementations.length === 0 && projects.length === 0 && (
+            {/* User Location Marker */}
+            {userLocation && (
               <Marker
-                position={marinduqueCenter}
-                icon={createCustomMarkerIcon(true)}
+                position={[userLocation.lat, userLocation.lng]}
+                icon={createUserLocationIcon()}
               >
                 <Popup className="custom-popup" closeButton={true}>
-                  <div className="text-center min-w-[200px]">
-                    <h3 className="font-bold text-gray-800 text-base mb-2">
-                      Province of Marinduque
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-2">Philippines</p>
-                    <p className="text-xs text-gray-500">
-                      Add implementation points or projects to see them on the
-                      map.
-                    </p>
+                  <div className="text-left min-w-[200px]">
+                    <div className="flex items-center gap-2 mb-2 pb-2 border-b border-blue-200">
+                      <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></div>
+                      <h3 className="font-bold text-gray-800 text-base">
+                        Your Location
+                      </h3>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <circle
+                            cx="12"
+                            cy="10"
+                            r="3"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        {isTrackingLocation
+                          ? "Tracking Active"
+                          : "Current Position"}
+                      </div>
+                      <div className="text-xs text-gray-600 space-y-1">
+                        <p className="flex items-center gap-1.5">
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            className="text-gray-400"
+                          >
+                            <path
+                              d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                            <circle
+                              cx="12"
+                              cy="10"
+                              r="3"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                          <span className="font-mono">
+                            {userLocation.lat.toFixed(6)},{" "}
+                            {userLocation.lng.toFixed(6)}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </Popup>
               </Marker>
             )}
+
+            {/* Default marker if no points */}
+            {implementations.length === 0 &&
+              projects.length === 0 &&
+              !userLocation && (
+                <Marker
+                  position={marinduqueCenter}
+                  icon={createCustomMarkerIcon(true)}
+                >
+                  <Popup className="custom-popup" closeButton={true}>
+                    <div className="text-center min-w-[200px]">
+                      <h3 className="font-bold text-gray-800 text-base mb-2">
+                        Province of Marinduque
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-2">Philippines</p>
+                      <p className="text-xs text-gray-500">
+                        Add implementation points or projects to see them on the
+                        map.
+                      </p>
+                    </div>
+                  </Popup>
+                </Marker>
+              )}
           </MapContainer>
+
+          {/* Location Tracking Button */}
+          <button
+            onClick={toggleLocationTracking}
+            className={`fixed md:absolute bottom-20 md:bottom-4 right-4 z-[1001] w-14 h-14 rounded-xl shadow-2xl border backdrop-blur-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-300 group ${
+              isTrackingLocation
+                ? "bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 border-blue-400/50"
+                : "bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 border-gray-600/50"
+            }`}
+            aria-label={
+              isTrackingLocation
+                ? "Stop location tracking"
+                : "Start location tracking"
+            }
+            title={
+              isTrackingLocation
+                ? "Stop tracking your location"
+                : "Track your real-time location"
+            }
+          >
+            {isTrackingLocation ? (
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                className="text-white transition-all duration-300"
+              >
+                <path
+                  d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"
+                  fill="currentColor"
+                />
+              </svg>
+            ) : (
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                className="text-white transition-all duration-300"
+              >
+                <path
+                  d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
+            {isTrackingLocation && (
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-400 rounded-full animate-pulse ring-2 ring-blue-400/50"></div>
+            )}
+          </button>
+
+          {/* Get Current Location Button */}
+          <button
+            onClick={getCurrentLocation}
+            className="fixed md:absolute bottom-32 md:bottom-20 right-4 z-[1001] w-14 h-14 bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-700 rounded-xl shadow-2xl border border-emerald-400/50 backdrop-blur-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-300 group"
+            aria-label="Get current location"
+            title="Get your current location once"
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              className="text-white transition-all duration-300"
+            >
+              <path
+                d="M12 2v4M12 18v4M2 12h4M18 12h4M12 8a4 4 0 100 8 4 4 0 000-8z"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
 
           {/* Chat Bot Button */}
           <button
