@@ -41,9 +41,18 @@ const chatWithAI = async (req, res) => {
     });
   } catch (error) {
     console.error("Error generating AI response:", error);
-    res.status(500).json({
+
+    // Handle quota/rate limit errors with appropriate status code
+    const isQuotaError =
+      error.message?.includes("quota") ||
+      error.message?.includes("Quota") ||
+      error.message?.includes("rate limit");
+
+    res.status(isQuotaError ? 429 : 500).json({
       success: false,
-      error: "Failed to generate response",
+      error: isQuotaError
+        ? "API quota exceeded"
+        : "Failed to generate response",
       message: error.message,
     });
   }

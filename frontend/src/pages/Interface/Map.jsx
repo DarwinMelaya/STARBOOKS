@@ -7,6 +7,7 @@ import api from "../../utils/api";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import toast from "react-hot-toast";
+import ChatBotModal from "../../components/Modals/ChatBotModal";
 
 // Fix for default marker icons in react-leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -277,6 +278,7 @@ const Map = () => {
   const [showProjects, setShowProjects] = useState(true);
   const [showControls, setShowControls] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const mapContainerRef = useRef(null);
 
   const baseLayers = useMemo(
@@ -891,6 +893,31 @@ const Map = () => {
             )}
           </MapContainer>
 
+          {/* Chat Bot Button */}
+          <button
+            onClick={() => setIsChatOpen(true)}
+            className="fixed md:absolute bottom-4 right-4 z-[1001] w-14 h-14 bg-gradient-to-br from-indigo-500 via-purple-600 to-cyan-500 rounded-xl shadow-2xl border border-indigo-400/50 backdrop-blur-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-300 group"
+            aria-label="Open DOST Assistant"
+            title="Ask about DOST Projects in Marinduque"
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              className="text-white transition-all duration-300"
+            >
+              <path
+                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-400 rounded-full animate-pulse ring-2 ring-emerald-400/50"></div>
+          </button>
+
           {/* Toggle Controls Button */}
           <button
             onClick={() => setShowControls(!showControls)}
@@ -1496,6 +1523,9 @@ const Map = () => {
           </div>
         </div>
       </div>
+
+      {/* Chat Bot Modal */}
+      <ChatBotModal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </Layout>
   );
 };

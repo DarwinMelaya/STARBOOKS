@@ -1,7 +1,7 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { GoogleGenAI } = require("@google/genai");
 
-// Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Initialize Gemini AI (API key is read from environment variable GEMINI_API_KEY)
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 /**
  * Generate AI response focused on DOST Projects in Marinduque, Philippines
@@ -14,8 +14,6 @@ async function generateDOSTMarinduqueResponse(
   conversationHistory = []
 ) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" }); // Using gemini-2.0-flash-exp, can be changed to gemini-2.5-flash if available
-
     // Build conversation context
     const conversationContext = conversationHistory
       .map((msg) => `${msg.role}: ${msg.content}`)
@@ -86,12 +84,55 @@ ${conversationContext}
 
 Please provide a well-structured, professional response that categorizes suggestions by the four DOST program types (GIA, SETUP, CEST, SSCP) and focuses on helping Marinduque through these specific DOST programs:`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
+    // Use the same API structure as the working code
+    // Try gemini-2.5-flash first (same as working code), fallback to other models if needed
+    let gen;
+    try {
+      gen = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+    } catch (modelError) {
+      // Fallback to gemini-1.5-flash if gemini-2.5-flash is not available
+      if (
+        modelError.message?.includes("model") ||
+        modelError.message?.includes("not found")
+      ) {
+        console.log("Falling back to gemini-1.5-flash");
+        gen = await ai.models.generateContent({
+          model: "gemini-1.5-flash",
+          contents: prompt,
+        });
+      } else {
+        throw modelError;
+      }
+    }
+
+    const response = gen.text;
+    return response;
   } catch (error) {
     console.error("Error generating AI response:", error);
-    throw new Error("Failed to generate AI response");
+
+    // Handle specific error types
+    if (error.status === 429) {
+      throw new Error(
+        "API quota exceeded. Please check your Gemini API plan and billing details, or try again later."
+      );
+    }
+
+    if (error.message?.includes("quota") || error.message?.includes("Quota")) {
+      throw new Error(
+        "API quota exceeded. Please upgrade your plan or try again later."
+      );
+    }
+
+    if (error.message?.includes("API_KEY")) {
+      throw new Error(
+        "Invalid API key. Please check your GEMINI_API_KEY environment variable."
+      );
+    }
+
+    throw new Error(error.message || "Failed to generate AI response");
   }
 }
 
