@@ -130,6 +130,8 @@ const ChatBotModal = ({ isOpen, onClose }) => {
   const [inputMessage, setInputMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resettingConversation, setResettingConversation] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -197,16 +199,18 @@ const ChatBotModal = ({ isOpen, onClose }) => {
   };
 
   const handleResetConversation = async () => {
-    if (!confirm("Are you sure you want to reset the conversation?")) return;
-
     try {
+      setResettingConversation(true);
       const res = await api.post("/ai/reset-conversation");
       if (res.data?.success) {
         setMessages([]);
         toast.success("Conversation reset");
+        setShowResetConfirm(false);
       }
     } catch (error) {
       toast.error("Failed to reset conversation");
+    } finally {
+      setResettingConversation(false);
     }
   };
 
@@ -250,7 +254,7 @@ const ChatBotModal = ({ isOpen, onClose }) => {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={handleResetConversation}
+                  onClick={() => setShowResetConfirm(true)}
                   className="px-3 py-1.5 text-xs rounded-lg border border-slate-700/70 bg-slate-800/60 text-slate-200 hover:bg-slate-800/80 hover:border-indigo-400/40 transition-all"
                   title="Reset conversation"
                 >
@@ -461,6 +465,69 @@ const ChatBotModal = ({ isOpen, onClose }) => {
               Ask about GIA, SETUP, CEST, or SSCP programs for Marinduque
             </p>
           </div>
+          {/* Reset Confirmation Modal */}
+          {showResetConfirm && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+              <div className="w-full max-w-sm mx-4 rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl shadow-black/60">
+                <div className="px-5 py-4 border-b border-slate-700/70">
+                  <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-500/20 text-red-400">
+                      !
+                    </span>
+                    Reset conversation?
+                  </h4>
+                  <p className="mt-1.5 text-xs text-slate-400">
+                    This will permanently clear your chat history with the DOST
+                    Project Assistant. This action cannot be undone.
+                  </p>
+                </div>
+                <div className="px-5 py-3 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowResetConfirm(false)}
+                    disabled={resettingConversation}
+                    className="px-3 py-1.5 text-xs rounded-lg border border-slate-700/70 bg-slate-800/70 text-slate-200 hover:bg-slate-800/90 hover:border-slate-500/70 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResetConversation}
+                    disabled={resettingConversation}
+                    className="px-3 py-1.5 text-xs rounded-lg bg-gradient-to-r from-red-500 to-rose-600 text-white font-medium shadow-lg shadow-red-900/40 hover:shadow-red-900/70 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                  >
+                    {resettingConversation ? (
+                      <>
+                        <svg
+                          className="animate-spin h-4 w-4"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          />
+                        </svg>
+                        <span>Resetting...</span>
+                      </>
+                    ) : (
+                      <>Reset</>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
