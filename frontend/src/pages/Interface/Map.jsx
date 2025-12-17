@@ -167,18 +167,73 @@ const getProgramTypeColors = (programType) => {
 };
 
 // Create custom marker icon for projects (different style based on program type)
-const createProjectMarkerIcon = (programType) => {
+const createProjectMarkerIcon = (programType, projectTitle = "") => {
   const color = getProgramTypeColors(programType);
+
+  // Truncate title if too long
+  const displayTitle =
+    projectTitle && projectTitle.length > 20
+      ? projectTitle.substring(0, 20) + "..."
+      : projectTitle;
 
   const iconHtml = `
     <div style="
       position: relative;
-      width: 40px;
-      height: 40px;
+      width: 100%;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: center;
     ">
+      ${
+        projectTitle
+          ? `
+      <!-- Project Title Label -->
+      <div style="
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        margin-bottom: 8px;
+        padding: 4px 8px;
+        background: linear-gradient(135deg, ${color.primary} 0%, ${color.secondary} 100%);
+        color: white;
+        font-size: 10px;
+        font-weight: 600;
+        white-space: nowrap;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(255, 255, 255, 0.8);
+        z-index: 10;
+        max-width: 150px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        pointer-events: none;
+      ">
+        ${displayTitle}
+        <!-- Arrow pointing down -->
+        <div style="
+          position: absolute;
+          bottom: -4px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 0;
+          height: 0;
+          border-left: 4px solid transparent;
+          border-right: 4px solid transparent;
+          border-top: 4px solid ${color.secondary};
+        "></div>
+      </div>
+      `
+          : ""
+      }
+      
+      <div style="
+        position: relative;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
       <!-- Pulsing ring animation -->
       <div style="
         position: absolute;
@@ -196,7 +251,9 @@ const createProjectMarkerIcon = (programType) => {
         width: 36px;
         height: 36px;
         border-radius: 50%;
-        background: linear-gradient(135deg, ${color.primary} 0%, ${color.secondary} 100%);
+        background: linear-gradient(135deg, ${color.primary} 0%, ${
+    color.secondary
+  } 100%);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 
                     0 0 0 3px rgba(255, 255, 255, 0.8),
                     inset 0 2px 4px rgba(255, 255, 255, 0.3);
@@ -245,12 +302,17 @@ const createProjectMarkerIcon = (programType) => {
     </style>
   `;
 
+  // Calculate icon size based on whether title exists
+  const iconHeight = projectTitle ? 70 : 48;
+  const iconAnchorY = projectTitle ? 70 : 48;
+  const popupAnchorY = projectTitle ? -70 : -48;
+
   return L.divIcon({
     html: iconHtml,
     className: "custom-marker",
-    iconSize: [40, 48],
-    iconAnchor: [20, 48],
-    popupAnchor: [0, -48],
+    iconSize: [40, iconHeight],
+    iconAnchor: [20, iconAnchorY],
+    popupAnchor: [0, popupAnchorY],
   });
 };
 
@@ -276,7 +338,7 @@ const Map = () => {
   const [projectsError, setProjectsError] = useState(null);
   const [showSTARBOOKS, setShowSTARBOOKS] = useState(true);
   const [showProjects, setShowProjects] = useState(true);
-  const [showControls, setShowControls] = useState(true);
+  const [showControls, setShowControls] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const mapContainerRef = useRef(null);
@@ -709,7 +771,10 @@ const Map = () => {
                 <Marker
                   key={`project-${project._id}`}
                   position={[project.coordinates.lat, project.coordinates.lng]}
-                  icon={createProjectMarkerIcon(project.programType)}
+                  icon={createProjectMarkerIcon(
+                    project.programType,
+                    project.projectTitle
+                  )}
                 >
                   <Popup
                     className="custom-popup"
