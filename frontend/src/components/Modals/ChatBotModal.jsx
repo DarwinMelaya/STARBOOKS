@@ -2,6 +2,129 @@ import { useState, useEffect, useRef } from "react";
 import api from "../../utils/api";
 import toast from "react-hot-toast";
 
+// Function to format markdown text into readable HTML
+const formatMessage = (text) => {
+  if (!text) return "";
+
+  const lines = text.split("\n");
+  let formatted = "";
+  let inList = false;
+  let listType = "";
+
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+
+    // Headers with visual indicators
+    if (trimmed.startsWith("### ")) {
+      if (inList) {
+        formatted += listType === "ul" ? "</ul>" : "</ol>";
+        inList = false;
+      }
+      formatted += `<h3 class="font-bold text-base text-emerald-300 mt-5 mb-2.5 flex items-center gap-2"><span class="w-1 h-5 bg-emerald-400 rounded-full"></span>${trimmed.substring(
+        4
+      )}</h3>`;
+    } else if (trimmed.startsWith("## ")) {
+      if (inList) {
+        formatted += listType === "ul" ? "</ul>" : "</ol>";
+        inList = false;
+      }
+      formatted += `<h2 class="font-bold text-lg text-emerald-200 mt-6 mb-3 flex items-center gap-2"><span class="w-1.5 h-6 bg-emerald-300 rounded-full"></span>${trimmed.substring(
+        3
+      )}</h2>`;
+    } else if (trimmed.startsWith("# ")) {
+      if (inList) {
+        formatted += listType === "ul" ? "</ul>" : "</ol>";
+        inList = false;
+      }
+      formatted += `<h1 class="font-bold text-xl text-emerald-100 mt-6 mb-4">${trimmed.substring(
+        2
+      )}</h1>`;
+    }
+    // Bullet points
+    else if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+      if (!inList || listType !== "ul") {
+        if (inList) formatted += listType === "ol" ? "</ol>" : "";
+        formatted += '<ul class="list-none space-y-2 my-4">';
+        inList = true;
+        listType = "ul";
+      }
+      const content = trimmed.substring(2);
+      // Process inline formatting in list items
+      const processedContent = content
+        .replace(
+          /\*\*(.*?)\*\*/g,
+          '<strong class="font-semibold text-white">$1</strong>'
+        )
+        .replace(/\*(.*?)\*/g, '<em class="italic text-slate-200">$1</em>')
+        .replace(
+          /`([^`]+)`/g,
+          '<code class="bg-slate-900/90 px-1.5 py-0.5 rounded text-emerald-400 font-mono text-xs border border-slate-700">$1</code>'
+        );
+      formatted += `<li class="flex items-start gap-2.5 text-slate-200 leading-relaxed"><span class="text-emerald-400 mt-1.5 flex-shrink-0">▸</span><span>${processedContent}</span></li>`;
+    }
+    // Numbered lists
+    else if (/^\d+\.\s/.test(trimmed)) {
+      if (!inList || listType !== "ol") {
+        if (inList) formatted += listType === "ul" ? "</ul>" : "";
+        formatted += '<ol class="list-none space-y-2 my-4">';
+        inList = true;
+        listType = "ol";
+      }
+      const match = trimmed.match(/^(\d+)\.\s(.+)$/);
+      if (match) {
+        const num = match[1];
+        const content = match[2];
+        const processedContent = content
+          .replace(
+            /\*\*(.*?)\*\*/g,
+            '<strong class="font-semibold text-white">$1</strong>'
+          )
+          .replace(/\*(.*?)\*/g, '<em class="italic text-slate-200">$1</em>')
+          .replace(
+            /`([^`]+)`/g,
+            '<code class="bg-slate-900/90 px-1.5 py-0.5 rounded text-emerald-400 font-mono text-xs border border-slate-700">$1</code>'
+          );
+        formatted += `<li class="flex items-start gap-2.5 text-slate-200 leading-relaxed"><span class="text-emerald-400 mt-1.5 flex-shrink-0 font-semibold min-w-[24px]">${num}.</span><span>${processedContent}</span></li>`;
+      }
+    }
+    // Empty line
+    else if (trimmed === "") {
+      if (inList) {
+        formatted += listType === "ul" ? "</ul>" : "</ol>";
+        inList = false;
+      }
+      formatted += '<div class="h-2"></div>';
+    }
+    // Regular paragraph
+    else {
+      if (inList) {
+        formatted += listType === "ul" ? "</ul>" : "</ol>";
+        inList = false;
+      }
+      // Process inline formatting
+      let processedLine = trimmed
+        .replace(
+          /\*\*(.*?)\*\*/g,
+          '<strong class="font-semibold text-white">$1</strong>'
+        )
+        .replace(/\*(.*?)\*/g, '<em class="italic text-slate-200">$1</em>')
+        .replace(
+          /`([^`]+)`/g,
+          '<code class="bg-slate-900/90 px-2 py-0.5 rounded text-emerald-400 font-mono text-xs border border-slate-700">$1</code>'
+        );
+
+      formatted += `<p class="text-slate-200 leading-relaxed mb-3">${processedLine}</p>`;
+    }
+  });
+
+  // Close any open list
+  if (inList) {
+    formatted += listType === "ul" ? "</ul>" : "</ol>";
+  }
+
+  return formatted || `<p class="text-slate-200 leading-relaxed">${text}</p>`;
+};
+
 const ChatBotModal = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
@@ -192,17 +315,58 @@ const ChatBotModal = ({ isOpen, onClose }) => {
                     msg.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
-                  <div
-                    className={`max-w-[75%] rounded-2xl px-4 py-3 ${
-                      msg.role === "user"
-                        ? "bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-800/40"
-                        : "bg-slate-800/60 border border-slate-700/70 text-slate-100"
-                    }`}
-                  >
-                    <div className="text-sm whitespace-pre-wrap break-words">
-                      {msg.content}
+                  {msg.role === "user" ? (
+                    <div className="max-w-[75%] rounded-2xl px-4 py-3 bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-800/40">
+                      <div className="text-sm whitespace-pre-wrap break-words">
+                        {msg.content}
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="max-w-[85%] rounded-2xl bg-gradient-to-br from-slate-800/90 to-slate-900/90 border border-slate-700/70 shadow-lg shadow-slate-900/50">
+                      {/* AI Message Header */}
+                      <div className="px-5 py-3 border-b border-slate-700/50 bg-slate-800/50 rounded-t-2xl">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-md">
+                            <svg
+                              className="w-4 h-4 text-white"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                              />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-emerald-300">
+                              DOST Assistant
+                            </p>
+                            <p className="text-[10px] text-slate-400">
+                              Marinduque Projects Specialist
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* AI Message Content */}
+                      <div className="px-5 py-4">
+                        <div
+                          className="max-w-none text-slate-100"
+                          dangerouslySetInnerHTML={{
+                            __html: formatMessage(msg.content),
+                          }}
+                          style={{
+                            lineHeight: "1.75",
+                            fontSize: "14px",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))
             )}
